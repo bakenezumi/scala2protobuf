@@ -34,8 +34,8 @@ package io.grpc.examples
 import java.util.concurrent.TimeUnit
 import java.util.logging.{Level, Logger}
 
-import io.grpc.examples.helloworld.helloworld.{HelloRequest, GreeterGrpc}
-import io.grpc.examples.helloworld.helloworld.GreeterGrpc.GreeterBlockingStub
+import io.grpc.examples.helloworld.{HelloRequest, GreeterGrpc}
+import io.grpc.examples.helloworld.GreeterGrpc.GreeterBlockingStub
 import io.grpc.{StatusRuntimeException, ManagedChannelBuilder, ManagedChannel}
 
 /**

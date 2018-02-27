@@ -33,11 +33,7 @@ package io.grpc.examples
 import java.util.logging.Logger
 
 import io.grpc.{Server, ServerBuilder}
-import io.grpc.examples.helloworld.helloworld.{
-  GreeterGrpc,
-  HelloRequest,
-  HelloReply
-}
+import io.grpc.examples.helloworld.{GreeterGrpc, HelloRequest, HelloReply}
 
 import scala.concurrent.{ExecutionContext, Future}
 

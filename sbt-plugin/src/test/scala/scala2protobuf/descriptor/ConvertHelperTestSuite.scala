@@ -10,7 +10,7 @@ class ConvertHelperTestSuite extends FunSuite {
       FileOptions.generate(ConvertHelper.defaultFileOptionConverter,
                            scalaPackageName)
 
-    assert(fileOption.javaPackage == "foo.bar.baz")
+    assert(fileOption.javaPackage == "foo.bar")
     assert(fileOption.javaOuterClassName == "BazProto")
   }
 

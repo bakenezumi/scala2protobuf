@@ -18,10 +18,11 @@ class NotCaseClass {}
     """
     val source = Parse.parseSource(Input.String(sourceString), dialect).get
     val ret =
-      Scala2Protobuf.collectScalaDescriptor(ScalaPackage(""), source.stats)
+      Scala2Protobuf.collectScalaDescriptor(ScalaPackage(""), source.stats, 0)
     assert(
       ret == Seq(
         descriptor.scala.Message(ScalaPackage("io.grpc.examples.helloworld"),
+                                 0,
                                  "HelloRequest",
                                  Seq(
                                    Field(isOptional = false,
@@ -29,6 +30,7 @@ class NotCaseClass {}
                                          descriptor.scala.ScalaType.STRING,
                                          "name"))),
         descriptor.scala.Message(ScalaPackage("io.grpc.examples.helloworld"),
+                                 0,
                                  "HelloReply",
                                  Seq(
                                    Field(isOptional = false,
@@ -46,7 +48,7 @@ case object TopLevelObject
     """
     val source = Parse.parseSource(Input.String(sourceString), dialect).get
     val ret =
-      Scala2Protobuf.collectScalaDescriptor(ScalaPackage(""), source.stats)
+      Scala2Protobuf.collectScalaDescriptor(ScalaPackage(""), source.stats, 0)
     assert(ret == Nil)
   }
 
@@ -61,10 +63,11 @@ trait Greeter {
     """
     val source = Parse.parseSource(Input.String(sourceString), dialect).get
     val ret =
-      Scala2Protobuf.collectScalaDescriptor(ScalaPackage(""), source.stats)
+      Scala2Protobuf.collectScalaDescriptor(ScalaPackage(""), source.stats, 0)
     assert(
       ret == Seq(Service(
         ScalaPackage("io.grpc.examples.helloworld"),
+        0,
         "Greeter",
         Seq(
           Method(
@@ -118,11 +121,12 @@ package object helloworld {
     """
     val source = Parse.parseSource(Input.String(sourceString), dialect).get
     val ret =
-      Scala2Protobuf.collectScalaDescriptor(ScalaPackage(""), source.stats)
+      Scala2Protobuf.collectScalaDescriptor(ScalaPackage(""), source.stats, 0)
     assert(
       ret == Seq(
         Service(
           ScalaPackage("io.grpc.examples.helloworld"),
+          0,
           "Greeter",
           Seq(
             Method(
@@ -137,6 +141,7 @@ package object helloworld {
           )
         ),
         descriptor.scala.Message(ScalaPackage("io.grpc.examples.helloworld"),
+                                 0,
                                  "HelloRequest",
                                  Seq(
                                    Field(isOptional = false,
@@ -144,6 +149,7 @@ package object helloworld {
                                          descriptor.scala.ScalaType.STRING,
                                          "name"))),
         descriptor.scala.Message(ScalaPackage("io.grpc.examples.helloworld"),
+                                 0,
                                  "HelloReply",
                                  Seq(
                                    Field(isOptional = false,

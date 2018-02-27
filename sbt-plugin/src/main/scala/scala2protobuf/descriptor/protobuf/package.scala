@@ -9,7 +9,8 @@ package object protobuf {
                   pkg: Package,
                   options: FileOptions,
                   messages: Seq[Message],
-                  services: Seq[Service]) {
+                  services: Seq[Service],
+                  lastModified: Long) {
     def toProto: String = {
       val servicesProto = services match {
         case Nil => ""

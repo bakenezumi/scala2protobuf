@@ -22,35 +22,41 @@ object Scala2Protobuf {
   def generate(input: Seq[File],
                dialect: Dialect = dialects.Scala212): Seq[protobuf.File] = {
     input
-      .map(file => IO.read(file, IO.utf8))
-      .map(source => Parse.parseSource(Input.String(source), dialect).get)
-      .flatMap { source =>
-        collectScalaDescriptor(ScalaPackage(""), source.stats)
+      .map(file => (IO.read(file, IO.utf8), file.lastModified))
+      .map {
+        case (source, lastModified) =>
+          (Parse.parseSource(Input.String(source), dialect).get, lastModified)
+      }
+      .flatMap {
+        case (source, lastModified) =>
+          collectScalaDescriptor(ScalaPackage(""), source.stats, lastModified)
       }
       .groupBy(_.pkg)
       .map { t =>
-        toProtobufDescriptor(t._1, t._2)
+        toProtobufDescriptor(t._1, t._2.map(_.lastModified).max, t._2)
       }
       .toSeq
   }
 
   def collectScalaDescriptor(scalaPackage: ScalaPackage,
-                             stats: Seq[Stat]): Seq[ScalaDescriptor] = {
+                             stats: Seq[Stat],
+                             lastModified: Long): Seq[ScalaDescriptor] = {
     stats.collect {
       case Pkg(pkg, pkgStats) =>
         collectScalaDescriptor(ScalaPackage(pkg.syntax.trim), pkgStats.collect {
           case s: Stat => s
-        })
+        }, lastModified)
       case obj: Pkg.Object =>
         val basePackage =
           if (scalaPackage.name.isEmpty) "" else scalaPackage.name + "."
         collectScalaDescriptor(ScalaPackage(basePackage + obj.name.value),
                                obj.templ.children.collect {
                                  case s: Stat => s
-                               })
+                               },
+                               lastModified)
       case clazz: Defn.Class if isCaseClass(clazz) =>
-        Seq(toMessage(scalaPackage, clazz))
-      case trt: Defn.Trait => Seq(toService(scalaPackage, trt))
+        Seq(toMessage(scalaPackage, clazz, lastModified))
+      case trt: Defn.Trait => Seq(toService(scalaPackage, trt, lastModified))
     }.flatten
   }
 
@@ -59,8 +65,11 @@ object Scala2Protobuf {
       case _: Mod.Case => true
     }
 
-  def toMessage(scalaPackage: ScalaPackage, clazz: Defn.Class): Message = {
+  def toMessage(scalaPackage: ScalaPackage,
+                clazz: Defn.Class,
+                lastModified: Long): Message = {
     Message(scalaPackage,
+            lastModified,
             clazz.name.value,
             clazz.ctor.paramss.head.map(toField))
   }
@@ -88,10 +97,15 @@ object Scala2Protobuf {
     }
   }
 
-  def toService(scalaPackage: ScalaPackage, trt: Defn.Trait): Service = {
-    Service(scalaPackage, trt.name.value, trt.templ.stats.collect {
-      case method: Decl.Def => toMethod(method)
-    })
+  def toService(scalaPackage: ScalaPackage,
+                trt: Defn.Trait,
+                lastModified: Long): Service = {
+    Service(scalaPackage,
+            lastModified,
+            trt.name.value,
+            trt.templ.stats.collect {
+              case method: Decl.Def => toMethod(method)
+            })
   }
 
   def toMethod(method: Decl.Def): Method = {
@@ -136,10 +150,11 @@ object Scala2Protobuf {
 
   def toProtobufDescriptor(
       pkg: ScalaPackage,
+      lastModified: Long,
       scalaDescriptors: Seq[ScalaDescriptor]): protobuf.File = {
 
     val messages = scalaDescriptors.collect {
-      case Message(_, messageName, fields: Seq[Field]) =>
+      case Message(_, _, messageName, fields: Seq[Field]) =>
         protobuf.Message(
           messageName,
           fields.zipWithIndex.map {
@@ -154,7 +169,7 @@ object Scala2Protobuf {
     }
 
     val services = scalaDescriptors.collect {
-      case Service(_, serviceName, methods: Seq[Method]) =>
+      case Service(_, _, serviceName, methods: Seq[Method]) =>
         protobuf.Service(
           serviceName,
           methods.map {
@@ -178,7 +193,8 @@ object Scala2Protobuf {
       ConvertHelper.defaultPackageConverter(pkg.name),
       ConvertHelper.defaultFileOptionConverter(pkg.name),
       messages,
-      services
+      services,
+      lastModified
     )
   }
 

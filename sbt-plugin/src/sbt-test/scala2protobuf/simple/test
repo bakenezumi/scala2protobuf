@@ -1,2 +1,5 @@
+> clean
 > scala2protobuf
+> compile
+> clean
 > compile

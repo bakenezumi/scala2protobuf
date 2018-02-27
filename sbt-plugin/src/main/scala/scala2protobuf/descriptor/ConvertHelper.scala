@@ -8,10 +8,13 @@ object ConvertHelper {
   def lastPackageName(packageName: String): String =
     packageName.split("\\.").last
 
+  def initPackageName(packageName: String): String =
+    packageName.split("\\.").init.mkString(".")
+
   val defaultFileOptionConverter: String => FileOptions =
     (scalaPackageName: String) =>
       FileOptions(
-        javaPackage = scalaPackageName,
+        javaPackage = initPackageName(scalaPackageName),
         javaOuterClassName = lastPackageName(scalaPackageName).capitalize + "Proto"
     )
 

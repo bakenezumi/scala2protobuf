@@ -8,13 +8,16 @@ package object scala {
 
   sealed trait ScalaDescriptor {
     val pkg: ScalaPackage
+    val lastModified: Long
   }
   case class Message(override val pkg: ScalaPackage,
+                     override val lastModified: Long,
                      name: String,
                      Fields: Seq[Field])
       extends ScalaDescriptor
 
   case class Service(override val pkg: ScalaPackage,
+                     override val lastModified: Long,
                      name: String,
                      methods: Seq[Method])
       extends ScalaDescriptor
