@@ -1,6 +1,7 @@
 package scala2protobuf
 
 import java.io.File
+import java.time.Clock
 
 import sbt._
 import sbt.Keys._
@@ -15,10 +16,10 @@ object Scala2ProtobufPlugin extends AutoPlugin {
                       "Generate .proto from Scala source files")
       val sources =
         TaskKey[Seq[File]]("scala2protobuf-sources",
-                           "Scala Sources of protobuf schema")
+                           "Scala sources of protobuf schema")
       val target =
         SettingKey[File]("scala2protobuf-target",
-                         "Directory to generate .proto")
+                         "The target directory to generate .proto")
       val replacementSources =
         TaskKey[Seq[File]]("scala2protobuf-replacement-sources",
                            "Exclude original source from classpath")
@@ -56,17 +57,19 @@ object GeneratorRunner {
   def apply(input: Seq[File],
             targetDirectory: File,
             log: ManagedLogger): Seq[File] = {
-    val protobufDescriptors = Scala2Protobuf.generate(input)
-    val dir = targetDirectory
-    protobufDescriptors.map { f =>
-      val file = dir / f.filename
-      if (!file.exists || file.lastModified < f.lastModified) {
-        val content = f.toProto
-        log.info(s"Generating protobuf file to $file")
-        IO.write(file,
-                 content.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+    Scala2Protobuf()
+      .generate(input)
+      .map { fileDescriptor =>
+        val file = targetDirectory / fileDescriptor.filename
+        if (!file.exists || file.lastModified < fileDescriptor.lastModified) {
+          val content = fileDescriptor.toProto(Clock.systemUTC)
+          log.info(s"Generating protobuf file to $file")
+          IO.write(file,
+                   content.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+        }
+        file
       }
-      file
-    }
+      .toSeq
+      .seq
   }
 }

@@ -4,6 +4,8 @@ import scala2protobuf.descriptor.protobuf.Type
 
 package object scala {
 
+  case class ScalaFile(name: String, contents: String, lastModified: Long)
+
   case class ScalaPackage(name: String)
 
   sealed trait ScalaDescriptor {

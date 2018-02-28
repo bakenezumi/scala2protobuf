@@ -8,39 +8,56 @@ import scala2protobuf.descriptor.scala.{
   Message,
   Method,
   ScalaDescriptor,
+  ScalaFile,
   ScalaPackage,
   ScalaType,
   Service
 }
 import scala2protobuf.descriptor.{ConvertHelper, protobuf}
 
+import scala.collection.parallel.{ParIterable, ParSeq}
 import scala.meta.inputs.Input
 import scala.meta.parsers.Parse
 import scala.meta._
 
 object Scala2Protobuf {
-  def generate(input: Seq[File],
-               dialect: Dialect = dialects.Scala212): Seq[protobuf.File] = {
-    input
-      .map(file => (IO.read(file, IO.utf8), file.lastModified))
-      .map {
-        case (source, lastModified) =>
-          (Parse.parseSource(Input.String(source), dialect).get, lastModified)
+  def apply(dialect: Dialect = dialects.Scala212): Scala2Protobuf =
+    new Scala2Protobuf(dialect)
+}
+
+class Scala2Protobuf(dialect: Dialect) {
+
+  def generate(input: Seq[File]): ParIterable[protobuf.File] = {
+    generateInternal(
+      input.par
+        .map(file =>
+          ScalaFile(file.getName, IO.read(file, IO.utf8), file.lastModified)))
+  }
+
+  private[scala2protobuf] def generateInternal(
+      files: ParSeq[ScalaFile]): ParIterable[protobuf.File] = {
+    files
+      .map { file =>
+        (Parse.parseSource(Input.String(file.contents), dialect).get,
+         file.lastModified)
       }
       .flatMap {
         case (source, lastModified) =>
           collectScalaDescriptor(ScalaPackage(""), source.stats, lastModified)
       }
       .groupBy(_.pkg)
-      .map { t =>
-        toProtobufDescriptor(t._1, t._2.map(_.lastModified).max, t._2)
+      .map {
+        case (pkg, scalaDescriptors) =>
+          toProtobufDescriptor(pkg,
+                               scalaDescriptors.map(_.lastModified).max,
+                               scalaDescriptors.seq)
       }
-      .toSeq
   }
 
-  def collectScalaDescriptor(scalaPackage: ScalaPackage,
-                             stats: Seq[Stat],
-                             lastModified: Long): Seq[ScalaDescriptor] = {
+  private[scala2protobuf] def collectScalaDescriptor(
+      scalaPackage: ScalaPackage,
+      stats: Seq[Stat],
+      lastModified: Long): Seq[ScalaDescriptor] = {
     stats.collect {
       case Pkg(pkg, pkgStats) =>
         collectScalaDescriptor(ScalaPackage(pkg.syntax.trim), pkgStats.collect {
@@ -60,21 +77,21 @@ object Scala2Protobuf {
     }.flatten
   }
 
-  def isCaseClass(clazz: Defn.Class): Boolean =
+  private[scala2protobuf] def isCaseClass(clazz: Defn.Class): Boolean =
     clazz.mods.exists {
       case _: Mod.Case => true
     }
 
-  def toMessage(scalaPackage: ScalaPackage,
-                clazz: Defn.Class,
-                lastModified: Long): Message = {
+  private[scala2protobuf] def toMessage(scalaPackage: ScalaPackage,
+                                        clazz: Defn.Class,
+                                        lastModified: Long): Message = {
     Message(scalaPackage,
             lastModified,
             clazz.name.value,
             clazz.ctor.paramss.head.map(toField))
   }
 
-  def toField(param: Term.Param): Field = {
+  private[scala2protobuf] def toField(param: Term.Param): Field = {
     Types.of(param.decltpe.get) match {
       case Types.Single(t) =>
         Field(isOptional = false,
@@ -97,9 +114,9 @@ object Scala2Protobuf {
     }
   }
 
-  def toService(scalaPackage: ScalaPackage,
-                trt: Defn.Trait,
-                lastModified: Long): Service = {
+  private[scala2protobuf] def toService(scalaPackage: ScalaPackage,
+                                        trt: Defn.Trait,
+                                        lastModified: Long): Service = {
     Service(scalaPackage,
             lastModified,
             trt.name.value,
@@ -108,7 +125,7 @@ object Scala2Protobuf {
             })
   }
 
-  def toMethod(method: Decl.Def): Method = {
+  private[scala2protobuf] def toMethod(method: Decl.Def): Method = {
     val inputParam = method.paramss.flatten.headOption.getOrElse(
       throw new RuntimeException(s"Input parameter is missing")
     )
@@ -148,7 +165,7 @@ object Scala2Protobuf {
     }
   }
 
-  def toProtobufDescriptor(
+  private[scala2protobuf] def toProtobufDescriptor(
       pkg: ScalaPackage,
       lastModified: Long,
       scalaDescriptors: Seq[ScalaDescriptor]): protobuf.File = {

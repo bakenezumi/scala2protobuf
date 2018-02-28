@@ -59,10 +59,9 @@ object Types {
         Types.Single(
           descriptor.scala.ScalaType.STRING
         )
-      case t"TimeStamp" | t"com.google.protobuf.Timestamp" =>
+      case t"Timestamp" | t"com.google.protobuf.Timestamp" =>
         Types.Single(
-          descriptor.scala.ScalaType
-            .ENUM_OR_MESSAGE("google.protobuf.Timestamp")
+          descriptor.scala.ScalaType.TIMESTAMP
         )
       case _ =>
         Types.Single(descriptor.scala.ScalaType.ENUM_OR_MESSAGE(tpe.syntax))
