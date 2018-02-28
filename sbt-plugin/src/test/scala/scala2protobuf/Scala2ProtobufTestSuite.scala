@@ -9,7 +9,11 @@ import scala.meta._
 import scala.meta.parsers.Parse
 
 class Scala2ProtobufTestSuite extends FunSuite {
-  val dialect: Dialect = dialects.Scala212
+  private[this] val dialect: Dialect = dialects.Scala212
+  private[this] val mockFile =
+    ScalaFile("Mock.scala", "mock content", 0, "/mock/Mock.scala")
+  private[this] val mockClock =
+    Clock.fixed(Instant.ofEpochMilli(0), ZoneId.of("UTC"))
 
   test("case class to Message") {
     val sourceString = """
@@ -20,25 +24,31 @@ class NotCaseClass {}
     """
     val source = Parse.parseSource(Input.String(sourceString), dialect).get
     val ret =
-      Scala2Protobuf().collectScalaDescriptor(ScalaPackage(""), source.stats, 0)
+      Scala2Protobuf().collectScalaDescriptor(ScalaPackage(""),
+                                              source.stats,
+                                              mockFile)
     assert(
       ret == Seq(
-        descriptor.scala.Message(ScalaPackage("io.grpc.examples.helloworld"),
-                                 0,
-                                 "HelloRequest",
-                                 Seq(
-                                   Field(isOptional = false,
-                                         isRepeated = false,
-                                         descriptor.scala.ScalaType.STRING,
-                                         "name"))),
-        descriptor.scala.Message(ScalaPackage("io.grpc.examples.helloworld"),
-                                 0,
-                                 "HelloReply",
-                                 Seq(
-                                   Field(isOptional = false,
-                                         isRepeated = false,
-                                         descriptor.scala.ScalaType.STRING,
-                                         "message")))
+        descriptor.scala.Message(
+          ScalaPackage("io.grpc.examples.helloworld"),
+          mockFile,
+          "HelloRequest",
+          Seq(
+            Field(isOptional = false,
+                  isRepeated = false,
+                  descriptor.scala.ScalaType.STRING,
+                  "name"))
+        ),
+        descriptor.scala.Message(
+          ScalaPackage("io.grpc.examples.helloworld"),
+          mockFile,
+          "HelloReply",
+          Seq(
+            Field(isOptional = false,
+                  isRepeated = false,
+                  descriptor.scala.ScalaType.STRING,
+                  "message"))
+        )
       ))
   }
 
@@ -50,7 +60,9 @@ case object TopLevelObject
     """
     val source = Parse.parseSource(Input.String(sourceString), dialect).get
     val ret =
-      Scala2Protobuf().collectScalaDescriptor(ScalaPackage(""), source.stats, 0)
+      Scala2Protobuf().collectScalaDescriptor(ScalaPackage(""),
+                                              source.stats,
+                                              mockFile)
     assert(ret == Nil)
   }
 
@@ -65,11 +77,13 @@ trait Greeter {
     """
     val source = Parse.parseSource(Input.String(sourceString), dialect).get
     val ret =
-      Scala2Protobuf().collectScalaDescriptor(ScalaPackage(""), source.stats, 0)
+      Scala2Protobuf().collectScalaDescriptor(ScalaPackage(""),
+                                              source.stats,
+                                              mockFile)
     assert(
       ret == Seq(Service(
         ScalaPackage("io.grpc.examples.helloworld"),
-        0,
+        mockFile,
         "Greeter",
         Seq(
           Method(
@@ -123,12 +137,14 @@ package object helloworld {
     """
     val source = Parse.parseSource(Input.String(sourceString), dialect).get
     val ret =
-      Scala2Protobuf().collectScalaDescriptor(ScalaPackage(""), source.stats, 0)
+      Scala2Protobuf().collectScalaDescriptor(ScalaPackage(""),
+                                              source.stats,
+                                              mockFile)
     assert(
       ret == Seq(
         Service(
           ScalaPackage("io.grpc.examples.helloworld"),
-          0,
+          mockFile,
           "Greeter",
           Seq(
             Method(
@@ -142,22 +158,26 @@ package object helloworld {
             )
           )
         ),
-        descriptor.scala.Message(ScalaPackage("io.grpc.examples.helloworld"),
-                                 0,
-                                 "HelloRequest",
-                                 Seq(
-                                   Field(isOptional = false,
-                                         isRepeated = false,
-                                         descriptor.scala.ScalaType.STRING,
-                                         "name"))),
-        descriptor.scala.Message(ScalaPackage("io.grpc.examples.helloworld"),
-                                 0,
-                                 "HelloReply",
-                                 Seq(
-                                   Field(isOptional = false,
-                                         isRepeated = false,
-                                         descriptor.scala.ScalaType.STRING,
-                                         "message")))
+        descriptor.scala.Message(
+          ScalaPackage("io.grpc.examples.helloworld"),
+          mockFile,
+          "HelloRequest",
+          Seq(
+            Field(isOptional = false,
+                  isRepeated = false,
+                  descriptor.scala.ScalaType.STRING,
+                  "name"))
+        ),
+        descriptor.scala.Message(
+          ScalaPackage("io.grpc.examples.helloworld"),
+          mockFile,
+          "HelloReply",
+          Seq(
+            Field(isOptional = false,
+                  isRepeated = false,
+                  descriptor.scala.ScalaType.STRING,
+                  "message"))
+        )
       ))
   }
 
@@ -174,7 +194,8 @@ trait Greeter {
   def sayHello(request: HelloRequest): Future[HelloReply]
 }
       """,
-        0
+        0,
+        "/dummy/Greeter.scala"
       ),
       ScalaFile(
         "HelloRequest.scala",
@@ -183,7 +204,8 @@ package io.grpc.examples.helloworld
 
 case class HelloRequest(name: String)
       """,
-        0
+        0,
+        "/dummy/HelloRequest.scala"
       ),
       ScalaFile(
         "HelloReply.scala",
@@ -192,16 +214,15 @@ package io.grpc.examples.helloworld
 
 case class HelloReply(message: String)
       """,
-        0
+        0,
+        "/dummy/HelloReply.scala"
       )
     )
-
-    val clock = Clock.fixed(Instant.ofEpochMilli(0), ZoneId.of("UTC"))
 
     assert(
       Scala2Protobuf()
         .generateInternal(files.par)
-        .map(_.toProto(clock))
+        .map(_.toProto(mockClock))
         .seq == Seq("""// Generated by scala2protobuf at 1970-01-01T00:00Z[UTC]
 syntax = "proto3";
 option java_multiple_files = false;
@@ -209,6 +230,7 @@ option java_package = "io.grpc.examples";
 option java_outer_classname = "HelloworldProto";
 
 package helloworld;
+
 service Greeter {
   rpc sayHello (HelloRequest) returns (HelloReply) {}
 }
@@ -232,7 +254,8 @@ import com.google.protobuf.timestamp.Timestamp
 
 case class HelloReply(message: String, time: Timestamp)
       """,
-        0
+        0,
+        "/dummy/Greeter.scala"
       )
     )
 
@@ -253,6 +276,79 @@ package helloworld;
 message HelloReply {
   string message = 1;
   google.protobuf.Timestamp time = 2;
+}
+"""))
+  }
+
+  test("sealed trait to Enum") {
+    val sourceString = """
+package io.grpc.examples.helloworld
+sealed trait Enum1
+object Enum1 {
+  object Value1 extends Enum1
+  object Value2 extends Enum1
+}
+object DDT extends PPP with KKK
+    """
+    val source = Parse.parseSource(Input.String(sourceString), dialect).get
+    val ret =
+      Scala2Protobuf().collectScalaDescriptor(ScalaPackage(""),
+                                              source.stats,
+                                              mockFile)
+    assert(
+      ret == Seq(
+        descriptor.scala.Enum(
+          ScalaPackage("io.grpc.examples.helloworld"),
+          mockFile,
+          "Enum1",
+          Seq("Value1", "Value2")
+        )
+      ))
+  }
+
+  test("sealed trait to enum protobuf schema") {
+    val files = Seq(
+      ScalaFile(
+        "Corpus.scala",
+        """
+package io.grpc.examples.helloworld
+
+sealed trait Corpus
+
+object Corpus {
+  object UNIVERSAL extends Corpus
+  object WEB extends Corpus
+  object IMAGES extends Corpus
+  object LOCAL extends Corpus
+  object NEWS extends Corpus
+  object PRODUCTS extends Corpus
+  object VIDEO extends Corpus
+}
+      """,
+        0,
+        "/mock/Corpus.scala"
+      ))
+
+    assert(
+      Scala2Protobuf()
+        .generateInternal(files.par)
+        .map(_.toProto(mockClock))
+        .seq == Seq("""// Generated by scala2protobuf at 1970-01-01T00:00Z[UTC]
+syntax = "proto3";
+option java_multiple_files = false;
+option java_package = "io.grpc.examples";
+option java_outer_classname = "HelloworldProto";
+
+package helloworld;
+
+enum Corpus {
+  UNIVERSAL = 0;
+  WEB = 1;
+  IMAGES = 2;
+  LOCAL = 3;
+  NEWS = 4;
+  PRODUCTS = 5;
+  VIDEO = 6;
 }
 """))
   }

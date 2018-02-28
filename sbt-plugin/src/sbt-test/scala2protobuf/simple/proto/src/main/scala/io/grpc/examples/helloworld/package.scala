@@ -12,4 +12,15 @@ package object helloworld {
 
   case class HelloReply(message: String)
 
+  sealed trait Corpus
+  object Corpus {
+    object UNIVERSAL extends Corpus
+    object WEB extends Corpus
+    object IMAGES extends Corpus
+    object LOCAL extends Corpus
+    object NEWS extends Corpus
+    object PRODUCTS extends Corpus
+    object VIDEO extends Corpus
+  }
+
 }

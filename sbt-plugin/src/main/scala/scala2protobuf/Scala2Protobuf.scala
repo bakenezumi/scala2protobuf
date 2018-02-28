@@ -4,6 +4,7 @@ import java.io.File
 
 import sbt.io._
 import scala2protobuf.descriptor.scala.{
+  Enum,
   Field,
   Message,
   Method,
@@ -30,26 +31,29 @@ class Scala2Protobuf(dialect: Dialect) {
   def generate(input: Seq[File]): ParIterable[protobuf.File] = {
     generateInternal(
       input.par
-        .map(file =>
-          ScalaFile(file.getName, IO.read(file, IO.utf8), file.lastModified)))
+        .map(
+          file =>
+            ScalaFile(file.getName,
+                      IO.read(file, IO.utf8),
+                      file.lastModified,
+                      file.getPath)))
   }
 
   private[scala2protobuf] def generateInternal(
       files: ParSeq[ScalaFile]): ParIterable[protobuf.File] = {
     files
       .map { file =>
-        (Parse.parseSource(Input.String(file.contents), dialect).get,
-         file.lastModified)
+        (Parse.parseSource(Input.String(file.contents), dialect).get, file)
       }
       .flatMap {
-        case (source, lastModified) =>
-          collectScalaDescriptor(ScalaPackage(""), source.stats, lastModified)
+        case (source, file) =>
+          collectScalaDescriptor(ScalaPackage(""), source.stats, file)
       }
       .groupBy(_.pkg)
       .map {
         case (pkg, scalaDescriptors) =>
           toProtobufDescriptor(pkg,
-                               scalaDescriptors.map(_.lastModified).max,
+                               scalaDescriptors.map(_.file.lastModified).max,
                                scalaDescriptors.seq)
       }
   }
@@ -57,12 +61,12 @@ class Scala2Protobuf(dialect: Dialect) {
   private[scala2protobuf] def collectScalaDescriptor(
       scalaPackage: ScalaPackage,
       stats: Seq[Stat],
-      lastModified: Long): Seq[ScalaDescriptor] = {
+      file: ScalaFile): Seq[ScalaDescriptor] = {
     stats.collect {
       case Pkg(pkg, pkgStats) =>
         collectScalaDescriptor(ScalaPackage(pkg.syntax.trim), pkgStats.collect {
           case s: Stat => s
-        }, lastModified)
+        }, file)
       case obj: Pkg.Object =>
         val basePackage =
           if (scalaPackage.name.isEmpty) "" else scalaPackage.name + "."
@@ -70,10 +74,12 @@ class Scala2Protobuf(dialect: Dialect) {
                                obj.templ.children.collect {
                                  case s: Stat => s
                                },
-                               lastModified)
+                               file)
       case clazz: Defn.Class if isCaseClass(clazz) =>
-        Seq(toMessage(scalaPackage, clazz, lastModified))
-      case trt: Defn.Trait => Seq(toService(scalaPackage, trt, lastModified))
+        Seq(toMessage(scalaPackage, clazz, file))
+      case trt: Defn.Trait if isSealedTrait(trt) =>
+        Seq(toEnum(scalaPackage, trt, stats, file))
+      case trt: Defn.Trait => Seq(toService(scalaPackage, trt, file))
     }.flatten
   }
 
@@ -82,11 +88,16 @@ class Scala2Protobuf(dialect: Dialect) {
       case _: Mod.Case => true
     }
 
+  private[scala2protobuf] def isSealedTrait(trt: Defn.Trait): Boolean =
+    trt.mods.exists {
+      case _: Mod.Sealed => true
+    }
+
   private[scala2protobuf] def toMessage(scalaPackage: ScalaPackage,
                                         clazz: Defn.Class,
-                                        lastModified: Long): Message = {
+                                        file: ScalaFile): Message = {
     Message(scalaPackage,
-            lastModified,
+            file,
             clazz.name.value,
             clazz.ctor.paramss.head.map(toField))
   }
@@ -114,15 +125,30 @@ class Scala2Protobuf(dialect: Dialect) {
     }
   }
 
+  private[scala2protobuf] def toEnum(scalaPackage: ScalaPackage,
+                                     trt: Defn.Trait,
+                                     stats: Seq[Stat],
+                                     file: ScalaFile): Enum = {
+    def findValues(_stats: Seq[Stat]): Seq[String] =
+      _stats.collect {
+        case obj: Defn.Object
+            if obj.templ.inits.exists(_.toString.trim == trt.name.value) =>
+          Seq(obj.name.value)
+        case obj: Defn.Object =>
+          findValues(obj.templ.stats)
+      }.flatten
+
+    val values = findValues(stats)
+
+    Enum(scalaPackage, file, trt.name.value, values)
+  }
+
   private[scala2protobuf] def toService(scalaPackage: ScalaPackage,
                                         trt: Defn.Trait,
-                                        lastModified: Long): Service = {
-    Service(scalaPackage,
-            lastModified,
-            trt.name.value,
-            trt.templ.stats.collect {
-              case method: Decl.Def => toMethod(method)
-            })
+                                        file: ScalaFile): Service = {
+    Service(scalaPackage, file, trt.name.value, trt.templ.stats.collect {
+      case method: Decl.Def => toMethod(method)
+    })
   }
 
   private[scala2protobuf] def toMethod(method: Decl.Def): Method = {
@@ -204,6 +230,14 @@ class Scala2Protobuf(dialect: Dialect) {
         )
     }
 
+    val enums = scalaDescriptors.collect {
+      case Enum(_, _, enumName, values) =>
+        protobuf.Enum(
+          enumName,
+          values
+        )
+    }
+
     protobuf.File(
       ConvertHelper.defaultFileNameConverter(pkg.name),
       protobuf.Syntax.PROTO3,
@@ -211,6 +245,7 @@ class Scala2Protobuf(dialect: Dialect) {
       ConvertHelper.defaultFileOptionConverter(pkg.name),
       messages,
       services,
+      enums,
       lastModified
     )
   }

@@ -4,23 +4,33 @@ import scala2protobuf.descriptor.protobuf.Type
 
 package object scala {
 
-  case class ScalaFile(name: String, contents: String, lastModified: Long)
+  case class ScalaFile(name: String,
+                       contents: String,
+                       lastModified: Long,
+                       path: String)
 
   case class ScalaPackage(name: String)
 
   sealed trait ScalaDescriptor {
     val pkg: ScalaPackage
-    val lastModified: Long
+    val file: ScalaFile
+    val name: String
   }
   case class Message(override val pkg: ScalaPackage,
-                     override val lastModified: Long,
-                     name: String,
+                     override val file: ScalaFile,
+                     override val name: String,
                      Fields: Seq[Field])
       extends ScalaDescriptor
 
+  case class Enum(override val pkg: ScalaPackage,
+                  override val file: ScalaFile,
+                  override val name: String,
+                  values: Seq[String])
+      extends ScalaDescriptor
+
   case class Service(override val pkg: ScalaPackage,
-                     override val lastModified: Long,
-                     name: String,
+                     override val file: ScalaFile,
+                     override val name: String,
                      methods: Seq[Method])
       extends ScalaDescriptor
 
@@ -43,8 +53,6 @@ package object scala {
                    isRepeated: Boolean,
                    tpe: ScalaType,
                    name: String)
-
-  case class Enum(name: String, values: Seq[String])
 
   case class Method(name: String,
                     isStreamInput: Boolean,
