@@ -22,6 +22,7 @@ lazy val proto = (project in file("proto")).enablePlugins(Scala2ProtobufPlugin).
   commonSettings,
   libraryDependencies ++=
     "io.grpc" % "grpc-stub" % grpcJavaVersion ::
+      "io.grpc" % "grpc-services" % grpcJavaVersion ::
       "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapbVersion ::
       "io.grpc" % "grpc-netty" % grpcJavaVersion ::
       "com.thesamet.scalapb" %% "scalapb-runtime" % scalapbVersion % "protobuf" ::

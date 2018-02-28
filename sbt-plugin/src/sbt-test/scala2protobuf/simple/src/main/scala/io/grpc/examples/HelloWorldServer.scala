@@ -33,7 +33,8 @@ package io.grpc.examples
 import java.util.logging.Logger
 
 import io.grpc.{Server, ServerBuilder}
-import io.grpc.examples.helloworld.{GreeterGrpc, HelloRequest, HelloReply}
+import io.grpc.examples.helloworld.{GreeterGrpc, HelloReply, HelloRequest}
+import io.grpc.protobuf.services.ProtoReflectionService
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -60,6 +61,7 @@ class HelloWorldServer(executionContext: ExecutionContext) { self =>
     server = ServerBuilder
       .forPort(HelloWorldServer.port)
       .addService(GreeterGrpc.bindService(new GreeterImpl, executionContext))
+      .addService(ProtoReflectionService.newInstance())
       .build
       .start
     HelloWorldServer.logger.info(
