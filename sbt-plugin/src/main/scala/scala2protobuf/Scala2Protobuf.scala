@@ -147,47 +147,49 @@ class Scala2Protobuf(dialect: Dialect) {
                                         trt: Defn.Trait,
                                         file: ScalaFile): Service = {
     Service(scalaPackage, file, trt.name.value, trt.templ.stats.collect {
-      case method: Decl.Def => toMethod(method)
+      case scalaMethod: Decl.Def => toMethod(scalaMethod)
     })
   }
 
-  private[scala2protobuf] def toMethod(method: Decl.Def): Method = {
-    val inputParam = method.paramss.flatten.headOption.getOrElse(
+  private[scala2protobuf] def toMethod(scalaMethod: Decl.Def): Method = {
+    val inputParam = scalaMethod.paramss.flatten.headOption.getOrElse(
       throw new RuntimeException(s"Input parameter is missing")
     )
-    if (method.paramss.flatten.size > 1) {
+    if (scalaMethod.paramss.flatten.size > 1) {
       throw new RuntimeException(s"Must be only one parameter")
     }
-    (Types.of(inputParam.decltpe.get), Types.of(method.decltpe)) match {
+    val methodName = scalaMethod.name.syntax.capitalize
+
+    (Types.of(inputParam.decltpe.get), Types.of(scalaMethod.decltpe)) match {
       case (Types.Single(in), Types.Future(Types.Single(out))) =>
-        Method(name = method.name.syntax,
+        Method(name = methodName,
                isStreamInput = false,
                inputType = in,
                isStreamOutput = false,
                outputType = out)
       case (Types.StreamObserver(Types.Single(in)),
             Types.Future(Types.Single(out))) =>
-        Method(name = method.name.syntax,
+        Method(name = methodName,
                isStreamInput = true,
                inputType = in,
                isStreamOutput = false,
                outputType = out)
       case (Types.Single(in), Types.StreamObserver(Types.Single(out))) =>
-        Method(name = method.name.syntax,
+        Method(name = methodName,
                isStreamInput = false,
                inputType = in,
                isStreamOutput = true,
                outputType = out)
       case (Types.StreamObserver(Types.Single(in)),
             Types.StreamObserver(Types.Single(out))) =>
-        Method(name = method.name.syntax,
+        Method(name = methodName,
                isStreamInput = true,
                inputType = in,
                isStreamOutput = true,
                outputType = out)
       case _ =>
         throw new RuntimeException(
-          s"${inputParam.decltpe.get} => ${method.decltpe} can not be used for service type ")
+          s"${inputParam.decltpe.get} => ${scalaMethod.decltpe} can not be used for service type ")
     }
   }
 

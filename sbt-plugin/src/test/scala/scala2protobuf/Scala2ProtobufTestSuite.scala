@@ -87,7 +87,7 @@ trait Greeter {
         "Greeter",
         Seq(
           Method(
-            "sayHello",
+            "SayHello",
             isStreamInput = false,
             inputType =
               descriptor.scala.ScalaType.ENUM_OR_MESSAGE("HelloRequest"),
@@ -96,7 +96,7 @@ trait Greeter {
               descriptor.scala.ScalaType.ENUM_OR_MESSAGE("HelloReply")
           ),
           Method(
-            "sayHelloStream",
+            "SayHelloStream",
             isStreamInput = true,
             inputType =
               descriptor.scala.ScalaType.ENUM_OR_MESSAGE("HelloRequest"),
@@ -148,7 +148,7 @@ package object helloworld {
           "Greeter",
           Seq(
             Method(
-              "sayHello",
+              "SayHello",
               isStreamInput = false,
               inputType =
                 descriptor.scala.ScalaType.ENUM_OR_MESSAGE("HelloRequest"),
@@ -232,7 +232,7 @@ option java_outer_classname = "HelloworldProto";
 package helloworld;
 
 service Greeter {
-  rpc sayHello (HelloRequest) returns (HelloReply) {}
+  rpc SayHello (HelloRequest) returns (HelloReply) {}
 }
 message HelloRequest {
   string name = 1;
