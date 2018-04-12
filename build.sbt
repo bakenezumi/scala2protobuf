@@ -29,8 +29,8 @@ lazy val plugin = (project in file("sbt-plugin")).settings(
   scriptedBufferLog := false,
   moduleName := "scala2protobuf-sbt",
   libraryDependencies ++=
-    "org.scalameta" %% "scalameta" % "3.3.1" ::
-    "org.scalameta" %% "contrib" % "3.3.1" ::
+    "org.scalameta" %% "scalameta" % "3.7.3" ::
+    "org.scalameta" %% "contrib" % "3.7.3" ::
     "org.scalatest" %% "scalatest" % "3.0.5" % Test ::
     Nil,
 )
