@@ -112,7 +112,7 @@ $ sbt scala2protobuf
 ### Example build
 ```sh
 $ cd sbt-plugin/src/sbt-test/scala2protobuf/simple
-$ sbt
+$ sbt "-Dplugin.version=0.1.0-SNAPSHOT"
 
 sbt:sbt-test> scala2protobuf
 ```

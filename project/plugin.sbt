@@ -1,1 +1,1 @@
-libraryDependencies += "org.scala-sbt" %% "scripted-plugin" % sbtVersion.value
+addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.3.4")

@@ -1,7 +1,11 @@
-addSbtPlugin("com.github.bakenezumi" % "scala2protobuf-sbt" % "0.1.0-SNAPSHOT")
+sys.props.get("plugin.version") match {
+  case Some(x) => addSbtPlugin("com.github.bakenezumi" % "scala2protobuf-sbt" % x)
+  case _ => sys.error("""|The system property 'plugin.version' is not defined.
+                         |Specify this property using the scriptedLaunchOpts -D.""".stripMargin)
+}
 
-addSbtPlugin("com.thesamet" % "sbt-protoc" % "0.99.15")
+addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.3.4")
 
-libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.7.0"
+addSbtPlugin("com.thesamet" % "sbt-protoc" % "0.99.18")
 
-libraryDependencies += "com.github.os72" % "protoc-jar" % "3.5.1"
+libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.7.4"
